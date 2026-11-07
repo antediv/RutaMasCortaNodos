@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Camino Más Corto (Algoritmo de Dijkstra)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --node-olive: #b5be2f;
+      --node-active: #22c55e;
+      --node-start: #38bdf8;
+      --node-end: #f43f5e;
+      --edge-default: #64748b;
+      --edge-path: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .wrapper {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    h1 { font-size: 22px; font-weight: 700; }
+    .subtitle { font-size: 13px; color: var(--muted); }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: #0f172a;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-group label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    select, button {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.btn-primary {
+      background: #0284c7;
+      border-color: #0369a1;
+      color: #fff;
+      transition: background 0.15s;
+    }
+    button.btn-primary:hover { background: #0369a1; }
+    button.btn-swap {
+      background: #334155;
+      padding: 8px 10px;
+      margin-top: 18px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 920px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .canvas-box {
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      user-select: none;
+    }
+    .edge-line {
+      stroke: #1e293b;
+      stroke-width: 2;
+      transition: all 0.25s;
+    }
+    .edge-line.active-path {
+      stroke: #16a34a;
+      stroke-width: 5;
+      stroke-dasharray: 8 4;
+      animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -12; }
+    }
+    .edge-label-bg {
+      fill: #ffffff;
+      opacity: 0.92;
+    }
+    .edge-label {
+      font-size: 12px;
+      font-weight: 600;
+      fill: #0f172a;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+    .edge-label.active-label {
+      fill: #15803d;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .node-circle {
+      fill: var(--node-olive);
+      stroke: #4d5311;
+      stroke-width: 2;
+      cursor: pointer;
+      transition: transform 0.15s, fill 0.2s;
+    }
+    .node-circle:hover {
+      stroke-width: 3.5;
+      stroke: #0f172a;
+    }
+    .node-circle.path-node {
+      fill: #4ade80;
+      stroke: #15803d;
+      stroke-width: 3;
+    }
+    .node-circle.start-node {
+      fill: #38bdf8;
+      stroke: #0369a1;
+      stroke-width: 3.5;
+    }
+    .node-circle.end-node {
+      fill: #fb7185;
+      stroke: #be123c;
+      stroke-width: 3.5;
+    }
+    .node-text {
+      font-size: 15px;
+      font-weight: 700;
+      fill: #0f172a;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .result-banner {
+      background: #0f172a;
+      border: 1px solid #22c55e;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .result-cost {
+      font-size: 28px;
+      font-weight: 800;
+      color: #4ade80;
+    }
+    .path-badges {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .node-badge {
+      background: #1e293b;
+      border: 1px solid #4ade80;
+      color: #f8fafc;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .arrow-step {
+      color: var(--muted);
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      background: #0f172a;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    tr.highlight-row {
+      background: rgba(34, 197, 94, 0.12);
+      font-weight: 600;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div>
+      <h1>Calculadora de Ruta Óptima — Algoritmo de Dijkstra</h1>
+      <div class="subtitle">Cálculo interactivo del camino más corto entre cualquier par de nodos del grafo</div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label for="startNode">Nodo Origen</label>
+        <select id="startNode"></select>
+      </div>
+      <button class="btn-swap" id="swapBtn" title="Intercambiar Origen y Destino">&#8646;</button>
+      <div class="control-group">
+        <label for="endNode">Nodo Destino</label>
+        <select id="endNode"></select>
+      </div>
+      <div class="control-group" style="margin-top: 18px;">
+        <button class="btn-primary" id="calcBtn">Calcular Ruta Más Corta</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- PANEL IZQUIERDO: GRAFO VISUAL -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Topología del Grafo (Interactivo)</span>
+        <span style="font-size: 12px; color: var(--muted); font-weight: 400;">Clic izquierdo: Origen | Shift+Clic: Destino</span>
+      </div>
+      <div class="canvas-box">
+        <svg id="graphSvg" viewBox="0 0 680 460"></svg>
+      </div>
+      <div class="hint">
+        Leyenda: <strong style="color:#38bdf8;">Azul</strong> = Nodo Origen &middot;
+        <strong style="color:#4ade80;">Verde</strong> = Nodos intermedios de la ruta óptima &middot;
+        <strong style="color:#fb7185;">Rojo</strong> = Nodo Destino.
+      </div>
+    </div>
+
+    <!-- PANEL DERECHO: RESULTADOS Y DESGLOSE -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Resultado del Camino Más Rápido</span>
+      </div>
+
+      <div class="result-banner">
+        <div style="font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 600;">Distancia / Costo Mínimo Total</div>
+        <div class="result-cost" id="totalCostDisplay">159</div>
+        <div style="font-size: 12px; color: var(--muted); margin-top: 6px;">Secuencia de Nodos y Pesos:</div>
+        <div class="path-badges" id="pathSequenceDisplay"></div>
+      </div>
+
+      <div class="panel-title" style="margin-top: 16px;">
+        <span>Desglose Tramo por Tramo</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Paso</th>
+            <th>Tramo (Arista)</th>
+            <th>Peso</th>
+            <th>Acumulado</th>
+          </tr>
+        </thead>
+        <tbody id="stepsTableBody"></tbody>
+      </table>
+
+      <div class="panel-title" style="margin-top: 22px;">
+        <span>Comparativa de Rutas Alternativas</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Ruta</th>
+            <th>Desglose</th>
+            <th>Costo Total</th>
+          </tr>
+        </thead>
+        <tbody id="altRoutesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TABLA COMPLETA DE DIJKSTRA -->
+  <div class="panel" style="margin-top: 20px;">
+    <div class="panel-title">
+      <span>Matriz Completa de Distancias Mínimas desde el Nodo Origen (Vector de Dijkstra)</span>
+    </div>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Nodo Destino</th>
+            <th>Distancia Mínima</th>
+            <th>Nodo Predecesor</th>
+            <th>Ruta Óptima Completa desde el Origen</th>
+          </tr>
+        </thead>
+        <tbody id="dijkstraMatrixBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 1. Definición exacta de nodos y coordenadas (fieles a la imagen proporcionada)
+  const nodes = [
+    { id: 1,  x: 465, y: 225 },
+    { id: 2,  x: 445, y: 328 },
+    { id: 3,  x: 612, y: 300 },
+    { id: 5,  x: 500, y: 392 },
+    { id: 6,  x: 238, y: 335 },
+    { id: 7,  x: 560, y: 112 },
+    { id: 10, x: 328, y: 118 },
+    { id: 11, x: 402, y: 142 },
+    { id: 12, x: 315, y: 192 },
+    { id: 13, x: 68,  y: 300 },
+    { id: 14, x: 175, y: 175 },
+    { id: 15, x: 232, y: 278 },
+    { id: 16, x: 466, y: 48  },
+    { id: 17, x: 92,  y: 414 }
+  ];
+
+  // 2. Definición exacta de aristas no dirigidas y sus pesos según la imagen
+  const edges = [
+    { u: 16, v: 7,  w: 61 },
+    { u: 16, v: 12, w: 85 },
+    { u: 7,  v: 10, w: 89 },
+    { u: 7,  v: 1,  w: 85 },
+    { u: 10, v: 11, w: 34 },
+    { u: 10, v: 14, w: 65 },
+    { u: 11, v: 12, w: 93 },
+    { u: 11, v: 1,  w: 60 },
+    { u: 12, v: 1,  w: 82 },
+    { u: 12, v: 15, w: 80 },
+    { u: 14, v: 15, w: 69 },
+    { u: 15, v: 1,  w: 92 },
+    { u: 15, v: 2,  w: 99 },
+    { u: 15, v: 6,  w: 40 },
+    { u: 15, v: 13, w: 64 },
+    { u: 13, v: 17, w: 89 },
+    { u: 17, v: 6,  w: 79 },
+    { u: 6,  v: 5,  w: 99 },
+    { u: 2,  v: 1,  w: 79 },
+    { u: 2,  v: 5,  w: 59 },
+    { u: 1,  v: 3,  w: 75 },
+    { u: 3,  v: 5,  w: 73 }
+  ];
+
+  // Construcción de lista de adyacencia
+  const adj = {};
+  nodes.forEach(n => { adj[n.id] = []; });
+  edges.forEach(e => {
+    adj[e.u].push({ to: e.v, weight: e.w });
+    adj[e.v].push({ to: e.u, weight: e.w });
+  });
+
+  // Algoritmo de Dijkstra
+  function runDijkstra(startId) {
+    const dist = {};
+    const prev = {};
+    const visited = new Set();
+
+    nodes.forEach(n => {
+      dist[n.id] = Infinity;
+      prev[n.id] = null;
+    });
+    dist[startId] = 0;
+
+    while (visited.size < nodes.length) {
+      let u = null;
+      let minDist = Infinity;
+      for (const n of nodes) {
+        if (!visited.has(n.id) && dist[n.id] < minDist) {
+          minDist = dist[n.id];
+          u = n.id;
+        }
+      }
+      if (u === null || dist[u] === Infinity) break;
+      visited.add(u);
+
+      for (const neighbor of adj[u]) {
+        if (!visited.has(neighbor.to)) {
+          const alt = dist[u] + neighbor.weight;
+          if (alt < dist[neighbor.to]) {
+            dist[neighbor.to] = alt;
+            prev[neighbor.to] = u;
+          }
+        }
+      }
+    }
+    return { dist, prev };
+  }
+
+  function reconstructPath(prev, startId, endId) {
+    const path = [];
+    let curr = endId;
+    while (curr !== null) {
+      path.unshift(curr);
+      if (curr === startId) break;
+      curr = prev[curr];
+    }
+    if (path[0] !== startId) return [];
+    return path;
+  }
+
+  // Búsqueda de caminos simples alternativos (DFS acotado) para mostrar comparativa
+  function findSimplePaths(startId, endId, maxPaths = 5) {
+    const results = [];
+    function dfs(curr, target, visited, path, cost, breakdown) {
+      if (curr === target) {
+        results.push({ path: [...path], cost, breakdown: [...breakdown] });
+        return;
+      }
+      if (path.length > 6) return; // limitar profundidad
+      for (const edge of adj[curr]) {
+        if (!visited.has(edge.to)) {
+          visited.add(edge.to);
+          path.push(edge.to);
+          breakdown.push(edge.weight);
+          dfs(edge.to, target, visited, path, cost + edge.weight, breakdown);
+          path.pop();
+          breakdown.pop();
+          visited.delete(edge.to);
+        }
+      }
+    }
+    dfs(startId, endId, new Set([startId]), [startId], 0, []);
+    results.sort((a, b) => a.cost - b.cost);
+    return results.slice(0, maxPaths);
+  }
+
+  // Inicializar selectores
+  const startSelect = document.getElementById('startNode');
+  const endSelect = document.getElementById('endNode');
+  const sortedIds = nodes.map(n => n.id).sort((a, b) => a - b);
+
+  sortedIds.forEach(id => {
+    const opt1 = document.createElement('option');
+    opt1.value = id;
+    opt1.textContent = `Nodo ${id}`;
+    if (id === 1) opt1.selected = true;
+    startSelect.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = id;
+    opt2.textContent = `Nodo ${id}`;
+    if (id === 14) opt2.selected = true;
+    endSelect.appendChild(opt2);
+  });
+
+  function getEdgeWeight(u, v) {
+    const found = edges.find(e => (e.u === u && e.v === v) || (e.u === v && e.v === u));
+    return found ? found.w : 0;
+  }
+
+  // Renderizado del grafo SVG y tablas
+  function updateCalculation() {
+    const startId = parseInt(startSelect.value, 10);
+    const endId = parseInt(endSelect.value, 10);
+
+    const { dist, prev } = runDijkstra(startId);
+    const optimalPath = reconstructPath(prev, startId, endId);
+    const optimalCost = dist[endId];
+
+    // Conjunto de aristas y nodos en el camino óptimo
+    const pathEdges = new Set();
+    for (let i = 0; i < optimalPath.length - 1; i++) {
+      const a = optimalPath[i];
+      const b = optimalPath[i + 1];
+      pathEdges.add(`${Math.min(a, b)}-${Math.max(a, b)}`);
+    }
+    const pathNodes = new Set(optimalPath);
+
+    // 1. Dibujar SVG
+    const svg = document.getElementById('graphSvg');
+    svg.innerHTML = '';
+
+    const nodeMap = {};
+    nodes.forEach(n => { nodeMap[n.id] = n; });
+
+    // Dibujar aristas
+    edges.forEach(e => {
+      const n1 = nodeMap[e.u];
+      const n2 = nodeMap[e.v];
+      const key = `${Math.min(e.u, e.v)}-${Math.max(e.u, e.v)}`;
+      const isPath = pathEdges.has(key);
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', n1.x);
+      line.setAttribute('y1', n1.y);
+      line.setAttribute('x2', n2.x);
+      line.setAttribute('y2', n2.y);
+      line.setAttribute('class', isPath ? 'edge-line active-path' : 'edge-line');
+      svg.appendChild(line);
+
+      // Posición de etiqueta (con ligero ajuste para aristas que se cruzan como 12-16 y 10-7)
+      let mx = (n1.x + n2.x) / 2;
+      let my = (n1.y + n2.y) / 2;
+      if (e.u === 16 && e.v === 12) { mx -= 8; my -= 6; }
+      if (e.u === 7 && e.v === 10)  { mx += 12; my -= 2; }
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', mx - 13);
+      rect.setAttribute('y', my - 10);
+      rect.setAttribute('width', 26);
+      rect.setAttribute('height', 20);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('class', 'edge-label-bg');
+      svg.appendChild(rect);
+
+      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      txt.setAttribute('x', mx);
+      txt.setAttribute('y', my);
+      txt.setAttribute('class', isPath ? 'edge-label active-label' : 'edge-label');
+      txt.textContent = e.w;
+      svg.appendChild(txt);
+    });
+
+    // Dibujar nodos
+    nodes.forEach(n => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', n.x);
+      circle.setAttribute('cy', n.y);
+      circle.setAttribute('r', 21);
+
+      let cls = 'node-circle';
+      if (n.id === startId) cls += ' start-node';
+      else if (n.id === endId) cls += ' end-node';
+      else if (pathNodes.has(n.id)) cls += ' path-node';
+      circle.setAttribute('class', cls);
+
+      circle.addEventListener('click', (ev) => {
+        if (ev.shiftKey) {
+          endSelect.value = n.id;
+        } else {
+          startSelect.value = n.id;
+        }
+        updateCalculation();
+      });
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', n.x);
+      label.setAttribute('y', n.y);
+      label.setAttribute('class', 'node-text');
+      label.textContent = n.id;
+
+      g.appendChild(circle);
+      g.appendChild(label);
+      svg.appendChild(g);
+    });
+
+    // 2. Actualizar panel de resultados
+    document.getElementById('totalCostDisplay').textContent =
+      optimalCost === Infinity ? 'Sin conexión' : `${optimalCost} unidades`;
+
+    const seqContainer = document.getElementById('pathSequenceDisplay');
+    seqContainer.innerHTML = '';
+    optimalPath.forEach((nodeId, idx) => {
+      const badge = document.createElement('span');
+      badge.className = 'node-badge';
+      if (idx === 0) badge.style.borderColor = '#38bdf8';
+      else if (idx === optimalPath.length - 1) badge.style.borderColor = '#fb7185';
+      badge.textContent = `Nodo ${nodeId}`;
+      seqContainer.appendChild(badge);
+
+      if (idx < optimalPath.length - 1) {
+        const w = getEdgeWeight(nodeId, optimalPath[idx + 1]);
+        const arrow = document.createElement('span');
+        arrow.className = 'arrow-step';
+        arrow.innerHTML = `&mdash;(${w})&rarr;`;
+        seqContainer.appendChild(arrow);
+      }
+    });
+
+    // 3. Tabla de pasos tramo por tramo
+    const stepsBody = document.getElementById('stepsTableBody');
+    stepsBody.innerHTML = '';
+    let acc = 0;
+    if (optimalPath.length === 1) {
+      stepsBody.innerHTML = `<tr><td colspan="4">El nodo origen y destino son el mismo (Costo 0).</td></tr>`;
+    } else {
+      for (let i = 0; i < optimalPath.length - 1; i++) {
+        const u = optimalPath[i];
+        const v = optimalPath[i + 1];
+        const w = getEdgeWeight(u, v);
+        acc += w;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>Paso ${i + 1}</td>
+          <td><strong>Nodo ${u}</strong> &rarr; <strong>Nodo ${v}</strong></td>
+          <td>+${w}</td>
+          <td><strong>${acc}</strong></td>
+        `;
+        stepsBody.appendChild(tr);
+      }
+    }
+
+    // 4. Tabla de rutas alternativas
+    const altBody = document.getElementById('altRoutesBody');
+    altBody.innerHTML = '';
+    const altPaths = findSimplePaths(startId, endId, 5);
+    altPaths.forEach((item, idx) => {
+      const tr = document.createElement('tr');
+      if (idx === 0) tr.className = 'highlight-row';
+      tr.innerHTML = `
+        <td>${idx === 0 ? '★ ' : ''}${item.path.join(' → ')}</td>
+        <td>${item.breakdown.join(' + ') || '0'}</td>
+        <td><strong>${item.cost}</strong> ${idx === 0 ? '(Óptimo)' : `(+${item.cost - optimalCost})`}</td>
+      `;
+      altBody.appendChild(tr);
+    });
+
+    // 5. Matriz completa de Dijkstra
+    const matrixBody = document.getElementById('dijkstraMatrixBody');
+    matrixBody.innerHTML = '';
+    sortedIds.forEach(targetId => {
+      const p = reconstructPath(prev, startId, targetId);
+      const tr = document.createElement('tr');
+      if (targetId === endId) tr.className = 'highlight-row';
+      tr.innerHTML = `
+        <td><strong>Nodo ${targetId}</strong></td>
+        <td><strong>${dist[targetId]}</strong></td>
+        <td>${prev[targetId] !== null ? `Nodo ${prev[targetId]}` : '-'}</td>
+        <td>${p.join(' → ')}</td>
+      `;
+      matrixBody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('calcBtn').addEventListener('click', updateCalculation);
+  startSelect.addEventListener('change', updateCalculation);
+  endSelect.addEventListener('change', updateCalculation);
+  document.getElementById('swapBtn').addEventListener('click', () => {
+    const tmp = startSelect.value;
+    startSelect.value = endSelect.value;
+    endSelect.value = tmp;
+    updateCalculation();
+  });
+
+  // Cálculo inicial (Nodo 1 al Nodo 14)
+  updateCalculation();
+</script>
+</body>
+</html>
